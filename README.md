@@ -29,10 +29,10 @@ Spring Boot & MySQL ile geliştirilmiş, Docker ile paketlenmiş tam stack çöz
 
 ```bash
 # 1. Repoyu klonla
-git clone https://github.com/username/tinyhouse-api.git && cd tinyhouse-api
+git clone https://github.com/Enskc05/TinyHouse.git && cd TinyHouse
 
 # 2. Docker servislerini başlat
 docker-compose up -d --build
 
 # 3. Çalıştığını doğrula
-curl http://localhost:8080/api/v1/health
+curl http://localhost:8080/
