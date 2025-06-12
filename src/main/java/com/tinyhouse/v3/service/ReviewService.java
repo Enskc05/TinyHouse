@@ -1,9 +1,9 @@
 package com.tinyhouse.v3.service;
 
 import com.tinyhouse.v3.dto.ReviewRequestDto;
-import com.tinyhouse.v3.dto.model.House;
-import com.tinyhouse.v3.dto.model.Review;
-import com.tinyhouse.v3.dto.model.User;
+import com.tinyhouse.v3.model.House;
+import com.tinyhouse.v3.model.Review;
+import com.tinyhouse.v3.model.User;
 import com.tinyhouse.v3.repository.ReviewRepository;
 import org.springframework.stereotype.Service;
 
@@ -41,5 +41,7 @@ public class ReviewService {
         House house = houseService.getHouseById(houseId);
         return reviewRepository.findByHouse(house);
     }
-
+    public void deleteAllByUser(User user){
+        reviewRepository.deleteAllByUser(user);
+    }
 }

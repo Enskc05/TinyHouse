@@ -1,7 +1,7 @@
 package com.tinyhouse.v3.controller;
 
 import com.tinyhouse.v3.dto.ReviewRequestDto;
-import com.tinyhouse.v3.dto.model.Review;
+import com.tinyhouse.v3.model.Review;
 import com.tinyhouse.v3.service.ReviewService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

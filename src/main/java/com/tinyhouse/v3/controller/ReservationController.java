@@ -20,6 +20,7 @@ public class ReservationController {
     public ReservationController(ReservationService reservationService) {
         this.reservationService = reservationService;
     }
+
     @PreAuthorize("hasRole('RENTER')")
     @PostMapping(path = "/create")
     public ResponseEntity<ReservationResponseDto> create(@RequestBody ReservationRequestDto requestDto){
@@ -53,5 +54,28 @@ public class ReservationController {
 
         List<ReservationResponseDto> reservations = reservationService.getReservationsByOwner(userId);
         return ResponseEntity.ok(reservations);
+    }
+    @PreAuthorize("hasRole('OWNER')")
+    @PutMapping("/cancel/{reservationId}")
+    public ResponseEntity<ReservationResponseDto> ownerCancelReservation(
+            @PathVariable UUID reservationId,
+            Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UUID ownerId = userDetails.getUser().getId();
+
+        ReservationResponseDto response = reservationService.cancelReservation(reservationId, ownerId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('OWNER')")
+    @PutMapping("/approve/{reservationId}")
+    public ResponseEntity<ReservationResponseDto> ownerApproveReservation(
+            @PathVariable UUID reservationId,
+            Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        UUID ownerId = userDetails.getUser().getId();
+
+        ReservationResponseDto response = reservationService.approveReservation(reservationId, ownerId);
+        return ResponseEntity.ok(response);
     }
 }

@@ -3,7 +3,7 @@ package com.tinyhouse.v3.controller;
 
 import com.tinyhouse.v3.dto.PaymentListResponse;
 import com.tinyhouse.v3.dto.PaymentRequestDto;
-import com.tinyhouse.v3.dto.model.Payment;
+import com.tinyhouse.v3.model.Payment;
 import com.tinyhouse.v3.security.CustomUserDetails;
 import com.tinyhouse.v3.service.PaymentService;
 import org.springframework.http.ResponseEntity;

@@ -1,7 +1,7 @@
 package com.tinyhouse.v3.config;
 
-import com.tinyhouse.v3.dto.model.House;
-import com.tinyhouse.v3.dto.model.User;
+import com.tinyhouse.v3.model.House;
+import com.tinyhouse.v3.model.User;
 import com.tinyhouse.v3.repository.UserRepository;
 import org.springframework.stereotype.Component;
 

@@ -5,10 +5,10 @@ import com.tinyhouse.v3.config.HouseNotFoundException;
 import com.tinyhouse.v3.dto.HouseDto;
 import com.tinyhouse.v3.dto.HouseListResponse;
 import com.tinyhouse.v3.dto.HouseResponseDto;
-import com.tinyhouse.v3.dto.model.House;
-import com.tinyhouse.v3.dto.model.Reservation;
-import com.tinyhouse.v3.dto.model.ReservationStatus;
-import com.tinyhouse.v3.dto.model.User;
+import com.tinyhouse.v3.model.House;
+import com.tinyhouse.v3.model.Reservation;
+import com.tinyhouse.v3.model.ReservationStatus;
+import com.tinyhouse.v3.model.User;
 import com.tinyhouse.v3.repository.HouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -111,11 +111,9 @@ public class HouseService {
                 .sorted(Comparator.comparing(Reservation::getStartDate))
                 .collect(Collectors.toList());
 
-
         if (activeReservations.isEmpty()) {
             return LocalDate.now();
         }
-
 
         return activeReservations.get(0).getStartDate();
     }
@@ -135,5 +133,13 @@ public class HouseService {
     }
     public List<House> getHousesByOwnerId(UUID ownerId) {
         return houseRepository.findByOwnerId(ownerId);
+    }
+    public List<HouseListResponse> getAllHouses() {
+        return houseRepository.findAll().stream()
+                .map(this::convertToHouseListResponse)
+                .collect(Collectors.toList());
+    }
+    public void deleteAllByOwner(User owner){
+        houseRepository.deleteAllByOwner(owner);
     }
 }

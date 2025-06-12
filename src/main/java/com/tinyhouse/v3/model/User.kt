@@ -1,4 +1,4 @@
-package com.tinyhouse.v3.dto.model
+package com.tinyhouse.v3.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.CascadeType
@@ -20,18 +20,18 @@ import java.util.UUID
 data class User(
     @Id
     val id: UUID? = UUID.randomUUID(),
-    val name: String,
-    val surname: String,
+    var name: String,
+    var surname: String,
 
     @Column(unique = true, nullable = false)
-    val email: String,
+    var email: String,
 
     private val password: String,
 
     @Enumerated(EnumType.STRING)
-    val role: UserRole,
+    var role: UserRole,
 
-    val status: Boolean,
+    var status: Boolean,
     val createdAt: LocalDateTime,
 
     @OneToMany(mappedBy = "owner",fetch = FetchType.EAGER, cascade = [CascadeType.ALL])

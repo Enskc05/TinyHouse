@@ -28,34 +28,60 @@ public class SecurityConfig {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity security) throws Exception{
+    public SecurityFilterChain filterChain(HttpSecurity security) throws Exception {
         security
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(x ->
-                        x.requestMatchers("/auth/**").permitAll()
-                                .requestMatchers("/user/info").authenticated()
-                                .requestMatchers("/reservation/test-auth").authenticated() // Yeni kural
-                                .requestMatchers(HttpMethod.POST, "/house/add").hasRole("OWNER")
-                                .requestMatchers(HttpMethod.PUT, "/house/update/**").hasRole("OWNER")
-                                .requestMatchers(HttpMethod.DELETE, "/house/delete/**").hasRole("OWNER")
-                                .requestMatchers(HttpMethod.GET, "/house/list").hasRole("OWNER")
-                                .requestMatchers(HttpMethod.POST, "/reservation/create").hasRole("RENTER")
-                                .requestMatchers(HttpMethod.DELETE, "/reservation/cancel/**").hasRole("RENTER")
-                                .requestMatchers(HttpMethod.GET, "/reservation/list").hasRole("RENTER")
-                                .requestMatchers(HttpMethod.GET, "/reservation/owner-list").hasRole("OWNER")
-                                .requestMatchers(HttpMethod.POST, "/review/create").hasRole("RENTER")
-                                .requestMatchers(HttpMethod.GET, "/review/house/**").permitAll()
-                                .requestMatchers(HttpMethod.POST, "/payment").hasRole("RENTER")
-                                .requestMatchers(HttpMethod.GET, "/payment/owner").hasRole("OWNER")
-                                .requestMatchers(HttpMethod.GET, "/payment/total").hasRole("OWNER")
+                .authorizeHttpRequests(auth -> auth
+
+                        // 🔓 Public Endpoints
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/review/house/**").permitAll()
+
+                        // 🔐 General Authenticated Users
+                        .requestMatchers("/user/info").authenticated()
+
+                        // 👤 RENTER Role
+                        .requestMatchers(HttpMethod.GET, "/house/all").hasRole("RENTER")
+                        .requestMatchers(HttpMethod.POST, "/reservation/create").hasRole("RENTER")
+                        .requestMatchers(HttpMethod.DELETE, "/reservation/cancel/**").hasRole("RENTER")
+                        .requestMatchers(HttpMethod.GET, "/reservation/list").hasRole("RENTER")
+                        .requestMatchers(HttpMethod.POST, "/review/create").hasRole("RENTER")
+                        .requestMatchers(HttpMethod.POST, "/payment").hasRole("RENTER")
+
+                        // 🏠 OWNER Role
+                        .requestMatchers(HttpMethod.POST, "/house/add").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/house/update/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.DELETE, "/house/delete/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.GET, "/house/list").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.GET, "/reservation/owner-list").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.GET, "/payment/owner").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.GET, "/payment/total").hasRole("OWNER")
+
+                        // 🛡️ ADMIN Role
+                        .requestMatchers(HttpMethod.GET, "/admin/user/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/admin/user/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/admin/user/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/admin/user/add").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/reservation/list").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/admin/reservation/cancel/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/admin/reservation/approve/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/house/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/admin/house/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/admin/house/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/payment/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/payment/user/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/payment/total").hasRole("ADMIN")
 
 
-
+                        // 🔐 Any other request must be authenticated
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()));
+
         return security.build();
     }
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

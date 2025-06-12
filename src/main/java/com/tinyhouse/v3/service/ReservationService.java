@@ -2,12 +2,10 @@ package com.tinyhouse.v3.service;
 
 import com.tinyhouse.v3.config.ReservationCancellationException;
 import com.tinyhouse.v3.config.ReservationNotFoundException;
+import com.tinyhouse.v3.dto.ReservationList;
 import com.tinyhouse.v3.dto.ReservationRequestDto;
 import com.tinyhouse.v3.dto.ReservationResponseDto;
-import com.tinyhouse.v3.dto.model.House;
-import com.tinyhouse.v3.dto.model.Reservation;
-import com.tinyhouse.v3.dto.model.ReservationStatus;
-import com.tinyhouse.v3.dto.model.User;
+import com.tinyhouse.v3.model.*;
 import com.tinyhouse.v3.repository.ReservationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -32,6 +30,7 @@ public class ReservationService {
         this.houseService = houseService;
     }
 
+    // Rezervasyon oluşturma
     public ReservationResponseDto createReservation(ReservationRequestDto request) {
         User renter = userService.getUserById(request.getRenterId());
         House house = houseService.getHouseById(request.getHouseId());
@@ -53,18 +52,19 @@ public class ReservationService {
                 saved.getId(),
                 saved.getStartDate(),
                 saved.getEndDate(),
-                saved.getStatus().name(),
+                saved.getStatus(),
                 saved.getHouse().getTitle(),
                 saved.getRenter().getName() + " " + saved.getRenter().getSurname()
         );
     }
+
+    // Rezervasyon iptali
     @Transactional
     public ReservationResponseDto cancelReservation(UUID reservationId, UUID userId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
         validateCancellation(reservation, userId);
-
 
         reservation.setStatus(ReservationStatus.CANCELLED);
         Reservation cancelledReservation = reservationRepository.save(reservation);
@@ -74,34 +74,29 @@ public class ReservationService {
         return convertToDto(cancelledReservation);
     }
 
-    private void validateCancellation(Reservation reservation, UUID userId) {
-        // Sadece rezervasyon sahibi veya ev sahibi iptal edebilir
-        if (!reservation.getRenter().getId().equals(userId) &&
-                !reservation.getHouse().getOwner().getId().equals(userId)) {
-            throw new ReservationCancellationException("Only renter or owner can cancel this reservation");
+    // Rezervasyon onaylama
+    @Transactional
+    public ReservationResponseDto approveReservation(UUID reservationId, UUID approverId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+
+        User approver = userService.getUserById(approverId);
+        User owner = reservation.getHouse().getOwner();
+
+        if (!owner.getId().equals(approverId) && approver.getRole() != UserRole.ADMIN) {
+            throw new SecurityException("Yalnızca ev sahibi veya yönetici rezervasyonu onaylayabilir.");
         }
 
-        // Zaten iptal edilmiş rezervasyon
-        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new ReservationCancellationException("Reservation is already cancelled");
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new IllegalStateException("Sadece bekleyen rezervasyonlar onaylanabilir.");
         }
 
-        // Başlamış rezervasyon iptal edilemez
-        if (reservation.getStartDate().isBefore(LocalDate.now())) {
-            throw new ReservationCancellationException("Cannot cancel started reservation");
-        }
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        Reservation approved = reservationRepository.save(reservation);
+
+        return convertToDto(approved);
     }
 
-    private ReservationResponseDto convertToDto(Reservation reservation) {
-        return new ReservationResponseDto(
-                reservation.getId(),
-                reservation.getStartDate(),
-                reservation.getEndDate(),
-                reservation.getStatus().name(),
-                reservation.getHouse().getTitle(),
-                reservation.getRenter().getName() + " " + reservation.getRenter().getSurname()
-        );
-    }
     // Kullanıcıya ait rezervasyonları getir
     public List<ReservationResponseDto> getReservationsByRenter(UUID renterId) {
         User renter = userService.getUserById(renterId);
@@ -112,6 +107,7 @@ public class ReservationService {
                 .collect(Collectors.toList());
     }
 
+    // Ev sahibine ait rezervasyonları getir
     public List<ReservationResponseDto> getReservationsByOwner(UUID ownerId) {
         User owner = userService.getUserByIdOwner(ownerId);
         List<Reservation> reservations = reservationRepository.findByHouseOwner(owner);
@@ -121,18 +117,68 @@ public class ReservationService {
                 .collect(Collectors.toList());
     }
 
+    // Admin için rezervasyonları getir
+    public List<ReservationList> getAllReservationsForAdmin() {
+        return reservationRepository.findAll().stream()
+                .map(reservation -> new ReservationList(
+                        reservation.getHouse().getOwner().getId(),
+                        reservation.getRenter().getId(),
+                        reservation.getStatus(),
+                        reservation.getCreatedAt()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    public Reservation findById(@NotNull UUID reservationID) {
+        return reservationRepository.findById(reservationID)
+                .orElseThrow(() -> new EntityNotFoundException("Reservation not found with ID: " + reservationID));
+    }
+
+    public void deleteAllByRenter(User user) {
+        reservationRepository.deleteAllByRenter(user);
+    }
+
+    // ---------------------------- PRIVATE METHODS ----------------------------
+
+    private void validateCancellation(Reservation reservation, UUID userId) {
+        User requester = userService.getUserById(userId);
+
+        boolean isRenter = reservation.getRenter().getId().equals(userId);
+        boolean isOwner = reservation.getHouse().getOwner().getId().equals(userId);
+        boolean isAdmin = requester.getRole() == UserRole.ADMIN;
+
+        if (!isRenter && !isOwner && !isAdmin) {
+            throw new ReservationCancellationException("Sadece kiracı, ev sahibi veya admin iptal edebilir.");
+        }
+
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new ReservationCancellationException("Rezervasyon zaten iptal edilmiş.");
+        }
+
+        if (reservation.getStartDate().isBefore(LocalDate.now())) {
+            throw new ReservationCancellationException("Başlamış rezervasyon iptal edilemez.");
+        }
+    }
+
+    private ReservationResponseDto convertToDto(Reservation reservation) {
+        return new ReservationResponseDto(
+                reservation.getId(),
+                reservation.getStartDate(),
+                reservation.getEndDate(),
+                reservation.getStatus(),
+                reservation.getHouse().getTitle(),
+                reservation.getRenter().getName() + " " + reservation.getRenter().getSurname()
+        );
+    }
+
     private ReservationResponseDto mapToResponseDto(Reservation reservation) {
         return new ReservationResponseDto(
                 reservation.getId(),
                 reservation.getStartDate(),
                 reservation.getEndDate(),
-                reservation.getStatus().name(),
+                reservation.getStatus(),
                 reservation.getHouse().getTitle(),
                 reservation.getRenter().getName() + " " + reservation.getRenter().getSurname()
         );
-    }
-    public Reservation getReservationById(@NotNull UUID reservationID){
-        return reservationRepository.findById(reservationID)
-                .orElseThrow(() -> new EntityNotFoundException("Reservation not found with ID: " + reservationID));
     }
 }

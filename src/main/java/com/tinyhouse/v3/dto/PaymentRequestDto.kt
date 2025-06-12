@@ -1,6 +1,6 @@
 package com.tinyhouse.v3.dto
 
-import com.tinyhouse.v3.dto.model.PaymentMethod
+import com.tinyhouse.v3.model.PaymentMethod
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID

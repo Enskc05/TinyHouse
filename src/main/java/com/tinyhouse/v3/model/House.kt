@@ -1,4 +1,4 @@
-package com.tinyhouse.v3.dto.model
+package com.tinyhouse.v3.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.CascadeType

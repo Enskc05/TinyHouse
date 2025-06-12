@@ -2,7 +2,7 @@ package com.tinyhouse.v3.service;
 
 import com.tinyhouse.v3.dto.PaymentListResponse;
 import com.tinyhouse.v3.dto.PaymentRequestDto;
-import com.tinyhouse.v3.dto.model.*;
+import com.tinyhouse.v3.model.*;
 import com.tinyhouse.v3.repository.HouseRepository;
 import com.tinyhouse.v3.repository.PaymentRepository;
 import com.tinyhouse.v3.repository.ReservationRepository;
@@ -134,6 +134,32 @@ public class PaymentService {
                 .map(Payment::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+    @Transactional
+    public List<PaymentListResponse> getAllPaymentsForAdmin() {
+        List<Payment> payments = paymentRepository.findAll();
+        return payments.stream()
+                .map(this::convertToPaymentListResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<PaymentListResponse> getPaymentsByUserId(UUID userId) {
+        User user = userService.getUserById(userId);
+        List<Payment> payments = paymentRepository.findByUser(user);
+
+        return payments.stream()
+                .map(this::convertToPaymentListResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public BigDecimal getTotalEarnings() {
+        List<Payment> payments = paymentRepository.findAll();
+        return payments.stream()
+                .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
     private PaymentListResponse convertToPaymentListResponse(Payment payment) {
         PaymentListResponse response = new PaymentListResponse(
@@ -144,6 +170,8 @@ public class PaymentService {
         );
         return response;
     }
-
+    public void deleteAllByUser(User user){
+        paymentRepository.deleteAllByUser(user);
+    }
 
 }

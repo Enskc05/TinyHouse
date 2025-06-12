@@ -43,4 +43,10 @@ public class HouseController {
     public List<HouseListResponse> getCurrentUserHouses(Authentication authentication) {
         return houseService.getHousesByOwnerEmail(authentication.getName());
     }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('RENTER')")
+    public List<HouseListResponse> getAllHouses() {
+        return houseService.getAllHouses();
+    }
 }

@@ -1,6 +1,6 @@
 package com.tinyhouse.v3.security;
 
-import com.tinyhouse.v3.dto.model.User;
+import com.tinyhouse.v3.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

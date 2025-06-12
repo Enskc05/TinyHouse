@@ -1,7 +1,7 @@
 package com.tinyhouse.v3.repository;
 
-import com.tinyhouse.v3.dto.model.User;
-import com.tinyhouse.v3.dto.model.UserRole;
+import com.tinyhouse.v3.model.User;
+import com.tinyhouse.v3.model.UserRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;

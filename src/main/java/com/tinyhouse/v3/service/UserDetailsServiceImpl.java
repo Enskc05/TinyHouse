@@ -1,6 +1,6 @@
 package com.tinyhouse.v3.service;
 
-import com.tinyhouse.v3.dto.model.User;
+import com.tinyhouse.v3.model.User;
 import com.tinyhouse.v3.repository.UserRepository;
 import com.tinyhouse.v3.security.CustomUserDetails;
 import org.springframework.security.core.userdetails.UserDetails;

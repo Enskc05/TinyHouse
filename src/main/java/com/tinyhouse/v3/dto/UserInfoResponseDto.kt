@@ -1,6 +1,6 @@
 package com.tinyhouse.v3.dto
 
-import com.tinyhouse.v3.dto.model.UserRole
+import com.tinyhouse.v3.model.UserRole
 import java.time.LocalDateTime
 
 data class UserInfoResponseDto(

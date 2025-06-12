@@ -4,8 +4,8 @@ package com.tinyhouse.v3.service;
 import com.tinyhouse.v3.dto.AuthResponseDto;
 import com.tinyhouse.v3.dto.LoginRequestDto;
 import com.tinyhouse.v3.dto.RegisterRequestDto;
-import com.tinyhouse.v3.dto.model.User;
-import com.tinyhouse.v3.dto.model.UserRole;
+import com.tinyhouse.v3.model.User;
+import com.tinyhouse.v3.model.UserRole;
 import com.tinyhouse.v3.repository.UserRepository;
 import com.tinyhouse.v3.security.CustomUserDetails;
 import jakarta.transaction.Transactional;
@@ -25,12 +25,14 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoderConfig;
     private final JwtService token;
     private final UserDetailsService userDetailsService;
+    private final UserService userService;
 
-    public AuthService(UserRepository userRepository, BCryptPasswordEncoder passswordEncoderConfig, JwtService token, UserDetailsService userDetailsService) {
+    public AuthService(UserRepository userRepository, BCryptPasswordEncoder passswordEncoderConfig, JwtService token, UserDetailsService userDetailsService, UserService userService) {
         this.userRepository = userRepository;
         this.passwordEncoderConfig = passswordEncoderConfig;
         this.token = token;
         this.userDetailsService = userDetailsService;
+        this.userService = userService;
     }
 
     public Optional<User> getByUserEmail(String email){
@@ -55,13 +57,15 @@ public class AuthService {
         );
         return userRepository.save(newUser);
     }
-
+    @Transactional
     public AuthResponseDto login(LoginRequestDto loginRequestDto) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequestDto.getEmail());
         String jwt = token.generateToken(userDetails);
         CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
         User user = customUserDetails.getUser();
+        userService.activateUser(user);
 
         return new AuthResponseDto(jwt, user.getId());
     }
+
 }
