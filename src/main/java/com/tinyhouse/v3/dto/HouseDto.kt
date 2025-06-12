@@ -1,5 +1,6 @@
 package com.tinyhouse.v3.dto
 
+import com.tinyhouse.v3.model.HouseImage
 import java.math.BigDecimal
 import java.time.LocalDate
 

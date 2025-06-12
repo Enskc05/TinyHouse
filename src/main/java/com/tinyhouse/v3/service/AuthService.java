@@ -9,6 +9,7 @@ import com.tinyhouse.v3.model.UserRole;
 import com.tinyhouse.v3.repository.UserRepository;
 import com.tinyhouse.v3.security.CustomUserDetails;
 import jakarta.transaction.Transactional;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -65,7 +66,17 @@ public class AuthService {
         User user = customUserDetails.getUser();
         userService.activateUser(user);
 
-        return new AuthResponseDto(jwt, user.getId());
+        String roleStr = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(GrantedAuthority::getAuthority)
+                .orElse("ROLE_UNKNOWN");
+
+        if (roleStr.startsWith("ROLE_")) {
+            roleStr = roleStr.substring(5);
+        }
+        UserRole role = UserRole.valueOf(roleStr);
+
+        return new AuthResponseDto(jwt, user.getId(), role);
     }
 
 }

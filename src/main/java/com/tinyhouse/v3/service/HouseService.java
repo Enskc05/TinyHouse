@@ -5,10 +5,7 @@ import com.tinyhouse.v3.config.HouseNotFoundException;
 import com.tinyhouse.v3.dto.HouseDto;
 import com.tinyhouse.v3.dto.HouseListResponse;
 import com.tinyhouse.v3.dto.HouseResponseDto;
-import com.tinyhouse.v3.model.House;
-import com.tinyhouse.v3.model.Reservation;
-import com.tinyhouse.v3.model.ReservationStatus;
-import com.tinyhouse.v3.model.User;
+import com.tinyhouse.v3.model.*;
 import com.tinyhouse.v3.repository.HouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -53,6 +50,12 @@ public class HouseService {
                 new ArrayList<>()
         );
 
+        List<HouseImage> imageList = request.getImageUrls().stream()
+                .map(base64 -> new HouseImage(UUID.randomUUID(), base64, null, house))
+                .collect(Collectors.toList());
+
+        house.setImages(imageList);
+
         House savedHouse = houseRepository.save(house);
         return new HouseResponseDto(savedHouse.getId());
     }
@@ -71,6 +74,13 @@ public class HouseService {
         existingHouse.setAvailableTo(dto.getAvailableTo());
         existingHouse.setActive(dto.isActive());
         existingHouse.setOwner(owner);
+
+        List<HouseImage> updatedImages = dto.getImageUrls().stream()
+                .map(base64 -> new HouseImage(UUID.randomUUID(), base64, null, existingHouse))
+                .collect(Collectors.toList());
+
+        existingHouse.getImages().clear(); // Eski görselleri kaldır
+        existingHouse.getImages().addAll(updatedImages);
 
         houseRepository.save(existingHouse);
     }
