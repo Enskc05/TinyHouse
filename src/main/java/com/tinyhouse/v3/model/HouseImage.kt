@@ -19,7 +19,7 @@ data class HouseImage(
     val id: UUID? = UUID.randomUUID(),
 
     @Lob
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     var imageUrl: String,
     var description: String? = null,
 

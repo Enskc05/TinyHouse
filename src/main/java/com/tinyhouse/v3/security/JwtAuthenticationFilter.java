@@ -14,9 +14,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String AUTH_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
@@ -27,64 +31,130 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
-        if (isPublicEndpoint(request)) {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
+
+        String authHeader = request.getHeader("Authorization");
+
+        // Public endpoint kontrolü
+        if (authHeader == null && shouldNotFilter(request)) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        // Token format kontrolü
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            sendErrorResponse(response, "Missing or invalid Authorization header");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid auth header");
             return;
         }
 
-        try {
-            final String jwt = authHeader.substring(7);
-            final String userEmail = jwtService.extractUsername(jwt);
+        String jwt = authHeader.substring(7);
+        String username = jwtService.extractUsername(jwt);
 
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-
-                if (!userDetails.isEnabled()) {
-                    throw new org.springframework.security.access.AccessDeniedException("User is inactive");
-                }
-
-                if (jwtService.isTokenValid(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
-
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                }
-            }
+        // Temel validasyonlar
+        if (username == null || SecurityContextHolder.getContext().getAuthentication() != null) {
             filterChain.doFilter(request, response);
+            return;
+        }
 
-        } catch (Exception ex) {
-            sendErrorResponse(response, "JWT processing error: " + ex.getMessage());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        if (jwtService.isTokenValid(jwt, userDetails)) {
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    userDetails,
+                    null,
+                    userDetails.getAuthorities()
+            );
+            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+        }
+
+        filterChain.doFilter(request, response);
+    }
+    private String validateAuthHeader(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String authHeader = request.getHeader(AUTH_HEADER);
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+            sendError(response, "Missing or invalid Authorization header");
+            return null;
+        }
+        return authHeader;
+    }
+
+    private String extractJwtToken(String authHeader) {
+        return authHeader.substring(BEARER_PREFIX.length());
+    }
+
+    private boolean authenticateUser(HttpServletRequest request,
+                                     HttpServletResponse response,
+                                     String jwt) throws IOException {
+        try {
+            // 1. Kullanıcı adını çıkar
+            String username = jwtService.extractUsername(jwt);
+            if (username == null) {
+                sendError(response, "Invalid token: No username found");
+                return false;
+            }
+
+            // 2. SecurityContext kontrolü
+            if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                return true; // Zaten doğrulanmış
+            }
+
+            // 3. UserDetails yükle
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (userDetails == null) {
+                sendError(response, "User not found");
+                return false;
+            }
+
+            // 4. Token geçerlilik kontrolü
+            if (!jwtService.isTokenValid(jwt, userDetails)) {
+                sendError(response, "Invalid token");
+                return false;
+            }
+
+            // 5. Authentication ayarla
+            setAuthentication(request, userDetails);
+            return true;
+
+        } catch (Exception e) {
+            sendError(response, "Authentication failed: " + e.getMessage());
+            return false;
         }
     }
 
-    private boolean isPublicEndpoint(HttpServletRequest request) {
+    private void setAuthentication(HttpServletRequest request, UserDetails userDetails) {
+        UsernamePasswordAuthenticationToken authToken =
+                new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        new ArrayList<>(userDetails.getAuthorities()) // Mutable copy
+                );
+
+        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
         return path.startsWith("/auth/") || path.equals("/error");
     }
 
-    private void sendErrorResponse(HttpServletResponse response, String message) throws IOException {
+    private void sendError(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         response.getWriter().write(
-                String.format("{\"error\": \"Unauthorized\", \"message\": \"%s\"}", message)
+                String.format("{\"error\":\"Unauthorized\",\"message\":\"%s\"}", message)
         );
+    }
+
+    private void handleAuthenticationError(HttpServletResponse response, Exception e)
+            throws IOException {
+        logger.error("Authentication error", e);
+        sendError(response, "Internal authentication error");
     }
 }

@@ -61,6 +61,7 @@ public class AdminController {
     public ResponseEntity<List<ReservationList>> getAllReservations(){
         return ResponseEntity.ok(adminService.getAllReservationsForAdmin());
     }
+
     //Rezervasyon iptal
     @PutMapping("/reservation/cancel/{reservationId}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -69,6 +70,7 @@ public class AdminController {
             @AuthenticationPrincipal(expression = "id") UUID adminId) {
         return ResponseEntity.ok(adminService.adminCancelReservation(reservationId, adminId));
     }
+
     //Rezervasyon Onaylama
     @PutMapping("/reservation/approve/{reservationId}")
     @PreAuthorize("hasRole('ADMIN')")

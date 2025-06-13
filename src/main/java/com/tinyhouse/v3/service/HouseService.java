@@ -51,6 +51,7 @@ public class HouseService {
         );
 
         List<HouseImage> imageList = request.getImageUrls().stream()
+                .filter(this::isValidBase64)
                 .map(base64 -> new HouseImage(UUID.randomUUID(), base64, null, house))
                 .collect(Collectors.toList());
 
@@ -126,6 +127,14 @@ public class HouseService {
         }
 
         return activeReservations.get(0).getStartDate();
+    }
+    private boolean isValidBase64(String value) {
+        try {
+            Base64.getDecoder().decode(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
     @Transactional
     public void updateHouseAvailability(House house) {

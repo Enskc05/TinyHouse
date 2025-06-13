@@ -5,26 +5,23 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.UUID;
-
+import java.util.*;
 
 public class CustomUserDetails implements UserDetails {
 
     private final User user;
+    private final List<GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
         this.user = user;
-    }
-
-    public User getUser() {
-        return user;
+        this.authorities = Collections.singletonList(
+                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+        );
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        return new ArrayList<>(authorities); // Mutable copy
     }
 
     @Override
@@ -39,17 +36,17 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; // ya da user entityden al
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true; // ya da user entityden al
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; // ya da user entityden al
+        return true;
     }
 
     @Override
@@ -57,8 +54,11 @@ public class CustomUserDetails implements UserDetails {
         return user.isEnabled();
     }
 
+    public User getUser() {
+        return user;
+    }
+
     public UUID getId() {
         return user.getId();
     }
 }
-
