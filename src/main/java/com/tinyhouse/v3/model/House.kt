@@ -36,16 +36,17 @@ data class House(
 
     @OneToMany(mappedBy = "house", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     @JsonIgnore
-    var reservations: List<Reservation>,
+    var reservations: MutableList<Reservation> = mutableListOf(),
 
     @OneToMany(mappedBy = "house", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     @JsonIgnore
-    var reviews: List<Review>,
+    var reviews: MutableList<Review> = mutableListOf(),
 
     @OneToMany(mappedBy = "house", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     @JsonIgnore
-    var images: List<HouseImage>
-){
+    var images: MutableList<HouseImage> = mutableListOf()
+
+) {
     constructor() : this(
         id = null,
         title = "",
@@ -57,8 +58,8 @@ data class House(
         availableTo = LocalDate.now(),
         createdAt = LocalDateTime.now(),
         owner = User(),
-        reservations = emptyList(),
-        reviews = emptyList(),
-        images = emptyList()
+        reservations = mutableListOf(),
+        reviews = mutableListOf(),
+        images = mutableListOf()
     )
 }

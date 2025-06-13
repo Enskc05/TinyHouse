@@ -30,7 +30,7 @@ public class HouseService {
         this.userService = userService;
         this.houseDeletionHandler = houseDeletionHandler;
     }
-
+    @Transactional
     public HouseResponseDto add(HouseDto request) {
         User owner = userService.findByEmail(request.getOwnerEmail());
 
@@ -60,7 +60,7 @@ public class HouseService {
         House savedHouse = houseRepository.save(house);
         return new HouseResponseDto(savedHouse.getId());
     }
-
+    @Transactional
     public void update(UUID houseId, HouseDto dto) {
         House existingHouse = houseRepository.findById(houseId)
                 .orElseThrow(() -> new RuntimeException("House not found"));
@@ -76,15 +76,17 @@ public class HouseService {
         existingHouse.setActive(dto.isActive());
         existingHouse.setOwner(owner);
 
-        List<HouseImage> updatedImages = dto.getImageUrls().stream()
+        existingHouse.getImages().clear();
+
+        List<HouseImage> newImages = dto.getImageUrls().stream()
                 .map(base64 -> new HouseImage(UUID.randomUUID(), base64, null, existingHouse))
                 .collect(Collectors.toList());
 
-        existingHouse.getImages().clear(); // Eski görselleri kaldır
-        existingHouse.getImages().addAll(updatedImages);
+        existingHouse.getImages().addAll(newImages);
 
-        houseRepository.save(existingHouse);
+        houseRepository.saveAndFlush(existingHouse);
     }
+
 
     @Transactional
     public void delete(UUID houseId) {

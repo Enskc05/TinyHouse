@@ -35,6 +35,17 @@ public class ReservationService {
         User renter = userService.getUserById(request.getRenterId());
         House house = houseService.getHouseById(request.getHouseId());
 
+        boolean existsOverlap = reservationRepository.existsOverlappingReservation(
+                renter.getId(),
+                house.getId(),
+                request.getStartDate(),
+                request.getEndDate()
+        );
+
+        if (existsOverlap) {
+            throw new IllegalStateException("Aynı tarih aralığında zaten bir rezervasyonunuz var.");
+        }
+
         Reservation reservation = new Reservation(
                 UUID.randomUUID(),
                 request.getStartDate(),
@@ -57,6 +68,7 @@ public class ReservationService {
                 saved.getRenter().getName() + " " + saved.getRenter().getSurname()
         );
     }
+
 
     // Rezervasyon iptali
     @Transactional

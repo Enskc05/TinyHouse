@@ -19,12 +19,12 @@ data class HouseImage(
     val id: UUID? = UUID.randomUUID(),
 
     @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(name = "image_url",columnDefinition = "LONGTEXT")
     var imageUrl: String,
     var description: String? = null,
 
-    @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
+    @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     @JoinColumn(name = "house_id")
     @JsonIgnore
-    val house: House
+    var house: House
 )
