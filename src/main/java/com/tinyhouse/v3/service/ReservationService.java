@@ -12,14 +12,17 @@ import jakarta.transaction.Transactional;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
+
     private final ReservationRepository reservationRepository;
     private final UserService userService;
     private final HouseService houseService;
@@ -31,9 +34,16 @@ public class ReservationService {
     }
 
     // Rezervasyon oluşturma
+    @Transactional
     public ReservationResponseDto createReservation(ReservationRequestDto request) {
         User renter = userService.getUserById(request.getRenterId());
         House house = houseService.getHouseById(request.getHouseId());
+
+        if (renter == null)
+            throw new EntityNotFoundException("Renter not found with ID: " + request.getRenterId());
+
+        if (house == null)
+            throw new EntityNotFoundException("House not found with ID: " + request.getHouseId());
 
         boolean existsOverlap = reservationRepository.existsOverlappingReservation(
                 renter.getId(),
@@ -59,16 +69,9 @@ public class ReservationService {
 
         Reservation saved = reservationRepository.save(reservation);
 
-        return new ReservationResponseDto(
-                saved.getId(),
-                saved.getStartDate(),
-                saved.getEndDate(),
-                saved.getStatus(),
-                saved.getHouse().getTitle(),
-                saved.getRenter().getName() + " " + saved.getRenter().getSurname()
-        );
+        // DTO dönüşünde amount kesinlikle null olmayacak şekilde hesaplanıyor
+        return mapToResponseDto(saved);
     }
-
 
     @Transactional
     public ReservationResponseDto approveReservation(UUID reservationId, UUID approverId) {
@@ -77,6 +80,9 @@ public class ReservationService {
 
         User approver = userService.findById(approverId);
         User owner = reservation.getHouse().getOwner();
+
+        if (approver == null)
+            throw new EntityNotFoundException("Approver not found with ID: " + approverId);
 
         boolean isAuthorized = approver.getId().equals(owner.getId()) ||
                 approver.getRole() == UserRole.ADMIN;
@@ -104,7 +110,9 @@ public class ReservationService {
         User user = userService.findById(userId);
         User owner = reservation.getHouse().getOwner();
 
-        // Yetki kontrolü: Kiracı VEYA ev sahibi VEYA admin
+        if (user == null)
+            throw new EntityNotFoundException("User not found with ID: " + userId);
+
         boolean isAuthorized = reservation.getRenter().getId().equals(userId) ||
                 user.getId().equals(owner.getId()) ||
                 user.getRole() == UserRole.ADMIN;
@@ -127,6 +135,9 @@ public class ReservationService {
     // Kullanıcıya ait rezervasyonları getir
     public List<ReservationResponseDto> getReservationsByRenter(UUID renterId) {
         User renter = userService.getUserById(renterId);
+        if (renter == null)
+            throw new EntityNotFoundException("Renter not found with ID: " + renterId);
+
         List<Reservation> reservations = reservationRepository.findByRenter(renter);
 
         return reservations.stream()
@@ -137,6 +148,9 @@ public class ReservationService {
     // Ev sahibine ait rezervasyonları getir
     public List<ReservationResponseDto> getReservationsByOwner(UUID ownerId) {
         User owner = userService.getUserByIdOwner(ownerId);
+        if (owner == null)
+            throw new EntityNotFoundException("Owner not found with ID: " + ownerId);
+
         List<Reservation> reservations = reservationRepository.findByHouseOwner(owner);
 
         return reservations.stream()
@@ -188,24 +202,49 @@ public class ReservationService {
     }
 
     private ReservationResponseDto convertToDto(Reservation reservation) {
-        return new ReservationResponseDto(
-                reservation.getId(),
-                reservation.getStartDate(),
-                reservation.getEndDate(),
-                reservation.getStatus(),
-                reservation.getHouse().getTitle(),
-                reservation.getRenter().getName() + " " + reservation.getRenter().getSurname()
-        );
+        return mapToResponseDto(reservation);
     }
 
     private ReservationResponseDto mapToResponseDto(Reservation reservation) {
+        if (reservation == null) throw new IllegalArgumentException("Reservation null!");
+        if (reservation.getHouse() == null) throw new IllegalArgumentException("House null!");
+        if (reservation.getRenter() == null) throw new IllegalArgumentException("Renter null!");
+
+        BigDecimal amount;
+        if (reservation.getPayment() != null && reservation.getPayment().getAmount() != null) {
+            amount = reservation.getPayment().getAmount();
+        } else {
+            amount = calculateAmount(reservation);
+        }
+
+        // amount kesinlikle null değil, null olursa BigDecimal.ZERO
+        if (amount == null) {
+            amount = BigDecimal.ZERO;
+        }
+
         return new ReservationResponseDto(
                 reservation.getId(),
                 reservation.getStartDate(),
                 reservation.getEndDate(),
                 reservation.getStatus(),
                 reservation.getHouse().getTitle(),
-                reservation.getRenter().getName() + " " + reservation.getRenter().getSurname()
+                reservation.getRenter().getName() + " " + reservation.getRenter().getSurname(),
+                amount
         );
+    }
+
+    private BigDecimal calculateAmount(Reservation reservation) {
+        if (reservation == null) throw new IllegalArgumentException("Reservation null!");
+        if (reservation.getStartDate() == null || reservation.getEndDate() == null)
+            throw new IllegalArgumentException("Start date or end date null!");
+        if (reservation.getHouse() == null)
+            throw new IllegalArgumentException("House null!");
+        if (reservation.getHouse().getPricePerNight() == null)
+            throw new IllegalArgumentException("Price per night null!");
+
+        long dayCount = ChronoUnit.DAYS.between(reservation.getStartDate(), reservation.getEndDate());
+        dayCount = Math.max(dayCount, 1);
+
+        return reservation.getHouse().getPricePerNight().multiply(BigDecimal.valueOf(dayCount));
     }
 }
