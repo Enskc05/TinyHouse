@@ -4,11 +4,13 @@ import com.tinyhouse.v3.dto.ReservationRequestDto;
 import com.tinyhouse.v3.dto.ReservationResponseDto;
 import com.tinyhouse.v3.security.CustomUserDetails;
 import com.tinyhouse.v3.service.ReservationService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +18,7 @@ import java.util.UUID;
 @RequestMapping("/reservation")
 public class ReservationController {
     private final ReservationService reservationService;
+    private static final Logger logger = LoggerFactory.getLogger(ReservationController.class);
 
     public ReservationController(ReservationService reservationService) {
         this.reservationService = reservationService;
@@ -50,7 +53,7 @@ public class ReservationController {
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<List<ReservationResponseDto>> getOwnerReservations(Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        UUID userId = userDetails.getUser().getId();
+        UUID userId = userDetails.getId();
 
         List<ReservationResponseDto> reservations = reservationService.getReservationsByOwner(userId);
         return ResponseEntity.ok(reservations);
@@ -61,21 +64,26 @@ public class ReservationController {
             @PathVariable UUID reservationId,
             Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        UUID ownerId = userDetails.getUser().getId();
+        UUID ownerId = userDetails.getId();
 
         ReservationResponseDto response = reservationService.cancelReservation(reservationId, ownerId);
         return ResponseEntity.ok(response);
     }
-
     @PreAuthorize("hasRole('OWNER')")
     @PutMapping("/approve/{reservationId}")
-    public ResponseEntity<ReservationResponseDto> ownerApproveReservation(
+    public ResponseEntity<?> approveReservation(
             @PathVariable UUID reservationId,
             Authentication authentication) {
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        UUID ownerId = userDetails.getUser().getId();
+        try {
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            UUID approverId = userDetails.getId();
 
-        ReservationResponseDto response = reservationService.approveReservation(reservationId, ownerId);
-        return ResponseEntity.ok(response);
+            logger.info("Approving reservation {} by user {}", reservationId, approverId);
+            ReservationResponseDto response = reservationService.approveReservation(reservationId, approverId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error approving reservation: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        }
     }
 }

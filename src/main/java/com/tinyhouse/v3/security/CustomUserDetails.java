@@ -21,7 +21,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return new ArrayList<>(authorities); // Mutable copy
+        return new ArrayList<>(authorities);
     }
 
     @Override

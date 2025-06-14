@@ -70,33 +70,19 @@ public class ReservationService {
     }
 
 
-    // Rezervasyon iptali
-    @Transactional
-    public ReservationResponseDto cancelReservation(UUID reservationId, UUID userId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
-
-        validateCancellation(reservation, userId);
-
-        reservation.setStatus(ReservationStatus.CANCELLED);
-        Reservation cancelledReservation = reservationRepository.save(reservation);
-
-        houseService.updateHouseAvailability(reservation.getHouse());
-
-        return convertToDto(cancelledReservation);
-    }
-
-    // Rezervasyon onaylama
     @Transactional
     public ReservationResponseDto approveReservation(UUID reservationId, UUID approverId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ReservationNotFoundException(reservationId));
 
-        User approver = userService.getUserById(approverId);
+        User approver = userService.findById(approverId);
         User owner = reservation.getHouse().getOwner();
 
-        if (!owner.getId().equals(approverId) && approver.getRole() != UserRole.ADMIN) {
-            throw new SecurityException("Yalnızca ev sahibi veya yönetici rezervasyonu onaylayabilir.");
+        boolean isAuthorized = approver.getId().equals(owner.getId()) ||
+                approver.getRole() == UserRole.ADMIN;
+
+        if (!isAuthorized) {
+            throw new SecurityException("Bu işlem için yetkiniz yok. Sadece ev sahibi veya admin onaylayabilir.");
         }
 
         if (reservation.getStatus() != ReservationStatus.PENDING) {
@@ -105,8 +91,37 @@ public class ReservationService {
 
         reservation.setStatus(ReservationStatus.CONFIRMED);
         Reservation approved = reservationRepository.save(reservation);
+        houseService.updateHouseAvailability(reservation.getHouse());
 
         return convertToDto(approved);
+    }
+
+    @Transactional
+    public ReservationResponseDto cancelReservation(UUID reservationId, UUID userId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ReservationNotFoundException(reservationId));
+
+        User user = userService.findById(userId);
+        User owner = reservation.getHouse().getOwner();
+
+        // Yetki kontrolü: Kiracı VEYA ev sahibi VEYA admin
+        boolean isAuthorized = reservation.getRenter().getId().equals(userId) ||
+                user.getId().equals(owner.getId()) ||
+                user.getRole() == UserRole.ADMIN;
+
+        if (!isAuthorized) {
+            throw new SecurityException("Bu işlem için yetkiniz yok.");
+        }
+
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            throw new IllegalStateException("Rezervasyon zaten iptal edilmiş.");
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        Reservation cancelled = reservationRepository.save(reservation);
+        houseService.updateHouseAvailability(reservation.getHouse());
+
+        return convertToDto(cancelled);
     }
 
     // Kullanıcıya ait rezervasyonları getir

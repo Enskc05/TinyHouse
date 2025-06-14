@@ -56,6 +56,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/reservation/owner-list").hasRole("OWNER")
                         .requestMatchers(HttpMethod.GET, "/payment/owner").hasRole("OWNER")
                         .requestMatchers(HttpMethod.GET, "/payment/total").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/reservation/approve/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/reservation/cancel/**").hasRole("OWNER")
+
 
                         // 🛡️ ADMIN Role
                         .requestMatchers(HttpMethod.GET, "/admin/user/all").hasRole("ADMIN")
