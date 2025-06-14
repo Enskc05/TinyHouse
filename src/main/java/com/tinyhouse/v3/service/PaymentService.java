@@ -166,7 +166,8 @@ public class PaymentService {
                 payment.getId(),
                 payment.getPaymentDate(),
                 payment.getAmount(),
-                payment.getPaymentMethod()
+                payment.getPaymentMethod(),
+                payment.getStatus()
         );
         return response;
     }
