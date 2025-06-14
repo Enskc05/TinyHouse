@@ -14,7 +14,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -30,6 +29,7 @@ public class UserService {
                 .orElseThrow(() -> new UsernameNotFoundException("Kullanıcı bulunamadı: " + email));
 
         return new UserInfoResponseDto(
+                user.getId(),
                 user.getName(),
                 user.getSurname(),
                 user.getEmail(),
@@ -81,6 +81,7 @@ public class UserService {
         return userRepository.findAll()
                 .stream()
                 .map(user -> new UserInfoResponseDto(
+                        user.getId(),
                         user.getName(),
                         user.getSurname(),
                         user.getEmail(),
