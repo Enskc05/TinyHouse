@@ -162,6 +162,7 @@ public class ReservationService {
     public List<ReservationList> getAllReservationsForAdmin() {
         return reservationRepository.findAll().stream()
                 .map(reservation -> new ReservationList(
+                        reservation.getId(),
                         reservation.getHouse().getOwner().getId(),
                         reservation.getRenter().getId(),
                         reservation.getStatus(),

@@ -5,6 +5,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 data class ReservationList(
+    val id: UUID,
     val ownerId: UUID,
     val renterId: UUID,
     val status: ReservationStatus,
